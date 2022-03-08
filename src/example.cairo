@@ -1,7 +1,7 @@
 %builtins range_check
 
 from bigint import BASE, BigInt3, bigint_mul,nondet_bigint3
-from parameters_def import N0, N1, N2
+from param_def import N0, N1, N2
 from ec import EcPoint, ec_add, ec_mul
 
 from starkware.cairo.common.math import assert_nn_le, assert_not_zero

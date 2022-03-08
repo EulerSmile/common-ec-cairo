@@ -1,6 +1,6 @@
 from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from field import verify_urbigInt3_zero, verify_urbigInt5_zero, is_urbigInt3_zero
-from parameters_def import P0, P1, P2, N0, N1, N2
+from param_def import P0, P1, P2, N0, N1, N2
 
 # Represents a point on the elliptic curve.
 # The zero point is represented using pt.x=0, as there is no point on the curve with this x value.
