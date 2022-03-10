@@ -1,6 +1,6 @@
 from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from field import verify_urbigInt3_zero, verify_urbigInt5_zero, is_urbigInt3_zero
-from param_def import P0, P1, P2, N0, N1, N2
+from param_def import P0, P1, P2, N0, N1, N2, A
 
 # Represents a point on the elliptic curve.
 # The zero point is represented using pt.x=0, as there is no point on the curve with this x value.
@@ -27,7 +27,7 @@ func compute_doubling_slope{range_check_ptr}(pt : EcPoint) -> (slope : BigInt3):
         
         y = pack(ids.pt.y, PRIME)
         
-        value = slope = div_mod(3 * x ** 2 - 3, 2 * y, p)
+        value = slope = div_mod(3 * x ** 2 + ids.A, 2 * y, p)
         
     %}
     let (slope : BigInt3) = nondet_bigint3()
@@ -37,7 +37,7 @@ func compute_doubling_slope{range_check_ptr}(pt : EcPoint) -> (slope : BigInt3):
 
     verify_urbigInt5_zero(
         UnreducedBigInt5(
-        d0=3 * x_sqr.d0 - 2 * slope_y.d0 - 3,
+        d0=3 * x_sqr.d0 - 2 * slope_y.d0 + A,
         d1=3 * x_sqr.d1 - 2 * slope_y.d1,
         d2=3 * x_sqr.d2 - 2 * slope_y.d2,
         d3=3 * x_sqr.d3 - 2 * slope_y.d3,
@@ -48,7 +48,7 @@ end
 
 # Returns the slope of the line connecting the two given points.
 # The slope is used to compute pt0 + pt1.
-# Assumption: pt0.x != pt1.x (mod secp256r1_prime).
+# Assumption: pt0.x != pt1.x (mod curve_prime).
 func compute_slope{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (slope : BigInt3):
     
     let P = BigInt3(P0, P1, P2)
