@@ -18,3 +18,6 @@ Developers should change domain parameters in [ec/param_def.cairo](ec/param_def.
 
 
 *Parameters is in 3-limbs format, each limb is in range of [0, 2^86), you can use `split.py` to split a big number into 3 limbs.*
+
+## License
+[MIT License](https://opensource.org/licenses/MIT) © EulerSmile
