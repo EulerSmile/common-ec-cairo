@@ -1,6 +1,6 @@
 from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from field import verify_urbigInt3_zero, verify_urbigInt5_zero, is_urbigInt3_zero
-from param_def import P0, P1, P2, N0, N1, N2, A
+from param_def import P0, P1, P2, N0, N1, N2, A0, A1, A2
 
 # Represents a point on the elliptic curve.
 # The zero point is represented using pt.x=0, as there is no point on the curve with this x value.
@@ -20,14 +20,15 @@ func compute_doubling_slope{range_check_ptr}(pt : EcPoint) -> (slope : BigInt3):
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
         from starkware.python.math_utils import div_mod
+
         # Compute the slope.
-        p = ids.P0 + ids.P1*2**86 + ids.P2*2**172
-        
+        p = ids.P0 + ids.P1 * 2 ** 86 + ids.P2 * 2 ** 172
+        a = ids.A0 + ids.A1 * 2 ** 86 + ids.A2 * 2 ** 172
+
         x = pack(ids.pt.x, PRIME)
-        
         y = pack(ids.pt.y, PRIME)
-        
-        value = slope = div_mod(3 * x ** 2 + ids.A, 2 * y, p)
+
+        value = slope = div_mod(3 * x ** 2 + a, 2 * y, p)
         
     %}
     let (slope : BigInt3) = nondet_bigint3()
@@ -37,9 +38,9 @@ func compute_doubling_slope{range_check_ptr}(pt : EcPoint) -> (slope : BigInt3):
 
     verify_urbigInt5_zero(
         UnreducedBigInt5(
-        d0=3 * x_sqr.d0 - 2 * slope_y.d0 + A,
-        d1=3 * x_sqr.d1 - 2 * slope_y.d1,
-        d2=3 * x_sqr.d2 - 2 * slope_y.d2,
+        d0=3 * x_sqr.d0 - 2 * slope_y.d0 + A0,
+        d1=3 * x_sqr.d1 - 2 * slope_y.d1 + A1,
+        d2=3 * x_sqr.d2 - 2 * slope_y.d2 + A2,
         d3=3 * x_sqr.d3 - 2 * slope_y.d3,
         d4=3 * x_sqr.d4 - 2 * slope_y.d4), P)
     
@@ -55,7 +56,9 @@ func compute_slope{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (slope : Bi
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
         from starkware.python.math_utils import div_mod
-        p = ids.P0 + ids.P1*2**86 + ids.P2*2**172
+
+        p = ids.P0 + ids.P1 * 2 ** 86 + ids.P2 * 2 ** 172
+
         # Compute the slope.
         x0 = pack(ids.pt0.x, PRIME)
         y0 = pack(ids.pt0.y, PRIME)
@@ -97,7 +100,8 @@ func ec_double{range_check_ptr}(pt : EcPoint) -> (res : EcPoint):
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
         
-        p = ids.P0 + ids.P1*2**86 + ids.P2*2**172
+        p = ids.P0 + ids.P1 * 2 ** 86 + ids.P2 * 2 ** 172
+
         slope = pack(ids.slope, PRIME)
         x = pack(ids.pt.x, PRIME)
         y = pack(ids.pt.y, PRIME)
@@ -158,7 +162,9 @@ func fast_ec_add{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (res : EcPoin
     
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import  pack
-        p = ids.P0 + ids.P1*2**86 + ids.P2*2**172
+
+        p = ids.P0 + ids.P1 * 2 ** 86 + ids.P2 * 2 ** 172
+
         slope = pack(ids.slope, PRIME)
         x0 = pack(ids.pt0.x, PRIME)
         x1 = pack(ids.pt1.x, PRIME)
