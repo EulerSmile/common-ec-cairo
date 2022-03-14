@@ -7,9 +7,10 @@ func verify_urbigInt5_zero{range_check_ptr}(val : UnreducedBigInt5, n : BigInt3)
     local flag 
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
+        from starkware.cairo.common.math_utils import as_int
         n = pack(ids.n, PRIME)
-        v3 = ids.val.d3 if ids.val.d3 < PRIME//2 else ids.val.d3 - PRIME
-        v4 = ids.val.d4 if ids.val.d4 < PRIME//2 else ids.val.d4 - PRIME
+        v3 = as_int(ids.val.d3, PRIME)
+        v4 = as_int(ids.val.d4, PRIME)
         v = pack(ids.val, PRIME) + v3*2**258 + v4*2**344
         q, r = divmod(v, n)
         
