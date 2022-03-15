@@ -48,5 +48,5 @@
 # | GX2    | 0x79be667ef9dcbbac55a06  | 0x6b17d1f2e12c4247f8bce  |
 # | GY0    | 0x554199c47d08ffb10d4b8  | 0x315ececbb6406837bf51f5 |
 # | GY1    | 0x2ff0384422a3f45ed1229a | 0x2d29f03e7858af38cd5dac |
-# | GY2    |                          | 0x4fe342e2fe1a7f9b8ee7e  |
+# | GY2    | 0x483ada7726a3c4655da4f  | 0x4fe342e2fe1a7f9b8ee7e  |
 # |--------------------------------------------------------------|
