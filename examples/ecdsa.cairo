@@ -1,7 +1,7 @@
 from bigint import BASE, BigInt3, bigint_mul, nondet_bigint3, UnreducedBigInt5
 from param_def import P0, P1, P2, N0, N1, N2, GX0, GX1, GX2, GY0, GY1, GY2, A0, A1, A2
 from field import verify_urbigInt5_zero
-from ec import EcPoint, ec_add, ec_mul
+from ec import EcPoint, ec_add, ec_mul, verify_point
 
 from starkware.cairo.common.math import assert_nn_le, assert_not_zero
 
@@ -70,77 +70,6 @@ func validate_signature_entry{range_check_ptr}(val : BigInt3):
             return ()
         end
     end
-    return ()
-end
-
-# Verify a point lies on the curve.
-# In the EC lib, we don't use `b` parameter explictly,
-# so to verify whether a point lies on the curve or not,
-# we use `G` to compare.
-# y_G^2 - y_pt^2 = x_G^3 - x_pt^3 + a(x_G - x_pt) =>
-# (y_G - y_pt)(y_G + y_pt) = (x_G^2 + x_G*x_pt + x_pt^2 + a)(x_G - x_pt)
-func verify_point{range_check_ptr}(pt: EcPoint):
-    let GX = BigInt3(GX0, GX1, GX2)
-    let GY = BigInt3(GY0, GY1, GY2)
-    let P = BigInt3(P0, P1, P2)
-    %{
-        from starkware.cairo.common.cairo_secp.secp_utils import pack
-
-        p = ids.P0 + ids.P1 * 2 ** 86 + ids.P2 *2 ** 172
-        gx = ids.GX0 + ids.GX1 * 2 ** 86 + ids.GX2 * 2 ** 172
-        kx = pack(ids.pt.x, PRIME)
-
-        gx2 = (gx * gx) % p
-        gkx_prod = (gx * kx) % p
-        kx2 = (kx * kx) % p
-
-        a = ids.A0 + ids.A1 * 2 ** 86 + ids.A2 * 2 ** 172
-        value = q = (gx2 + gkx_prod + kx2 + a) % p
-    %}
-
-    let (q) = nondet_bigint3()
-
-    # check correctness of q.
-    let (gx2) = bigint_mul(GX, GX)
-    let (gkx_prod) = bigint_mul(pt.x, GX)
-    let (kx2) = bigint_mul(pt.x, pt.x)
-
-    verify_urbigInt5_zero(UnreducedBigInt5(
-        d0 = gx2.d0 + gkx_prod.d0 + kx2.d0 + A0 - q.d0,
-        d1 = gx2.d1 + gkx_prod.d1 + kx2.d1 + A1 - q.d1,
-        d2 = gx2.d2 + gkx_prod.d2 + kx2.d2 + A2 - q.d2,
-        d3 = gx2.d3 + gkx_prod.d3 + kx2.d3,
-        d4 = gx2.d4 + gkx_prod.d4 + kx2.d4,
-    ), P)
-
-    # check left == right
-    let gky_diff = BigInt3(
-        d0 = GY0 - pt.y.d0,
-        d1 = GY1 - pt.y.d1,
-        d2 = GY2 - pt.y.d2
-    )
-    let gky_sum = BigInt3(
-        d0 = GY0 + pt.y.d0,
-        d1 = GY1 + pt.y.d1,
-        d2 = GY2 + pt.y.d2
-    )
-    let gkx_diff = BigInt3(
-        d0 = GX0 - pt.x.d0,
-        d1 = GX1 - pt.x.d1,
-        d2 = GX2 - pt.x.d2
-    )
-    let (left_diff) = bigint_mul(gky_diff, gky_sum)
-    let (right_diff) = bigint_mul(q, gkx_diff)
-
-    verify_urbigInt5_zero(
-        UnreducedBigInt5(
-        d0 = left_diff.d0 - right_diff.d0,
-        d1 = left_diff.d1 - right_diff.d1,
-        d2 = left_diff.d2 - right_diff.d2,
-        d3 = left_diff.d3 - right_diff.d3,
-        d4 = left_diff.d4 - right_diff.d4,
-    ), P)
-
     return ()
 end
 

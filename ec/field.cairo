@@ -11,7 +11,7 @@ func verify_urbigInt5_zero{range_check_ptr}(val : UnreducedBigInt5, n : BigInt3)
         n = pack(ids.n, PRIME)
         v3 = as_int(ids.val.d3, PRIME)
         v4 = as_int(ids.val.d4, PRIME)
-        v = pack(ids.val, PRIME) + v3 * 2 ** 258 + v4 * 2 ** 344
+        v = pack(ids.val, PRIME) + v3 * ids.BASE ** 3 + v4 * ids.BASE ** 4
         q, r = divmod(v, n)
         
         assert r == 0, f"verify_zero: Invalid input {ids.val.d0, ids.val.d1, ids.val.d2}."
