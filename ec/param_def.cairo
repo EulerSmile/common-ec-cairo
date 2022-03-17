@@ -1,5 +1,8 @@
 # The domain paramters of elliptic curve.
 
+# The base of the representation.
+const BASE = 2 ** 86
+
 # P = sum(P_i * BASE^i)
     # Secp256 K1
     const P0 = 0x3ffffffffffffefffffc2f

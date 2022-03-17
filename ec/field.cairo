@@ -1,4 +1,5 @@
-from bigint import BASE, BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3,bigint_mul
+from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3,bigint_mul
+from param_def import BASE
 
 #is val mod n =0?
 func verify_urbigInt5_zero{range_check_ptr}(val : UnreducedBigInt5, n : BigInt3):

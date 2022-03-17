@@ -1,6 +1,8 @@
-from bigint import BASE, BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
+from starkware.cairo.common.bitwise import bitwise_and
+from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
+from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul, bigint_sub
 from field import verify_urbigInt3_zero, verify_urbigInt5_zero, is_urbigInt3_zero
-from param_def import P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
+from param_def import BASE, P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
 
 # Represents a point on the elliptic curve.
 # The zero point is represented using pt.x=0, as there is no point on the curve with this x value.
@@ -223,6 +225,12 @@ func ec_add{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (res : EcPoint):
         # pt0.y = pt1.y.
         return ec_double(pt0)
     end
+end
+
+func ec_neg{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(pt0 : EcPoint) -> (res: EcPoint):
+    let (y) = bigint_sub(BigInt3(0, 0, 0), pt0.y)
+    let res = EcPoint(pt0.x, y)
+    return (res=res)
 end
 
 # Given 0 <= m < 250, a scalar and a point on the elliptic curve, pt,
