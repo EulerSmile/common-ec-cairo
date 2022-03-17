@@ -1,14 +1,9 @@
 # Computes `a + b + carry`, returning the result along with the new carry.
 # Input and Output values must be in range of [0, BASE).
 from param_def import BASE
+from starkware.cairo.common.math import unsigned_div_rem
 func adc{range_check_ptr}(a: felt, b: felt, carry: felt) -> (res, new_carry):
-    alloc_locals
-    local res
-    local new_carry
-    %{
-        # Python treat a, b, carry as bigint, which could be bigger than 172 bits
-        ids.res, ids.new_carry = divmod(ids.a + ids.b + ids.carry, ids.BASE)
-    %}
+    let (res, new_carry) = unsigned_div_rem(a + b + carry, BASE)
 
     # Check that 0 <= a < BASE
     [range_check_ptr] = a
@@ -37,14 +32,9 @@ end
 # Computes `a - (b + borrow)`, returning the result along with the new borrow.
 # Input and Output values must be in range of [0, BASE).
 func sbb{range_check_ptr}(a: felt, b: felt, borrow: felt) -> (res, new_borrow):
-    alloc_locals
-    local res
-    local new_borrow
-    %{
-        # Python treat a, b, borrow as bigint, which is bigger than 172 bits
-        move = (ids.a - (ids.b + ids.borrow // (BASE / 2) )) % BASE**2
-        ids.res, ids.new_borrow = divmod(move, BASE)
-    %}
+    let (mb, _) = unsigned_div_rem(borrow, BASE/2)
+    let (_, move) = unsigned_div_rem(a - (b + mb), BASE**2)
+    let (res, new_borrow) = unsigned_div_rem(move, BASE)
 
     # Check that 0 <= a < BASE
     [range_check_ptr] = a
