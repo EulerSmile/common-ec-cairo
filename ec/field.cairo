@@ -1,4 +1,4 @@
-from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3,bigint_mul
+from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from param_def import BASE
 
 #is val mod n =0?

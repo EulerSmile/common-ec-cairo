@@ -1,7 +1,4 @@
-from starkware.cairo.common.bitwise import bitwise_and
-from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
 from param_def import P0, P1, P2, BASE
-from utils import adc, sbb
 
 # Represents an integer defined by
 #   d0 + BASE * d1 + BASE**2 * d2.
@@ -41,35 +38,6 @@ func bigint_mul(x : BigInt3, y : BigInt3) -> (res : UnreducedBigInt5):
         d2=x.d0 * y.d2 + x.d1 * y.d1 + x.d2 * y.d0,
         d3=x.d1 * y.d2 + x.d2 * y.d1,
         d4=x.d2 * y.d2))
-end
-
-func sub_inner{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(l0, l1, l2, l3, r0, r1, r2, r3) -> (res:BigInt3, borrow):
-    let (w0, borrow) = sbb(l0, r0, 0)
-    let (w1, borrow) = sbb(l1, r1, borrow)
-    let (w2, borrow) = sbb(l2, r2, borrow)
-    let (_, borrow) = sbb(l3, r3, borrow)
-
-    let (ba0) = bitwise_and(P0, borrow)
-    let (ba1) = bitwise_and(P1, borrow)
-    let (ba2) = bitwise_and(P2, borrow)
-
-    let (w0, carry) = adc(w0, ba0, 0)
-    let (w1, carry) = adc(w1, ba1, carry)
-    let (w2, _) = adc(w2, ba2, carry)
-
-    return (
-        res=BigInt3(
-        d0=w0,
-        d1=w1,
-        d2=w2,
-    ),
-    borrow=borrow)
-end
-
-# Returns x - y mod p
-func bigint_sub{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(x: BigInt3, y: BigInt3) -> (res: BigInt3):
-    let (res, borrow) = sub_inner(x.d0, x.d1, x.d2, 0, y.d0, y.d1, y.d2, 0)
-    return (res=res)
 end
 
 # Returns a BigInt3 instance whose value is controlled by a prover hint.

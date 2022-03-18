@@ -1,6 +1,4 @@
-from starkware.cairo.common.bitwise import bitwise_and
-from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
-from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul, bigint_sub
+from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from field import verify_urbigInt3_zero, verify_urbigInt5_zero, is_urbigInt3_zero
 from param_def import BASE, P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
 
@@ -227,9 +225,22 @@ func ec_add{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (res : EcPoint):
     end
 end
 
-func ec_neg{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(pt0 : EcPoint) -> (res: EcPoint):
-    let (y) = bigint_sub(BigInt3(0, 0, 0), pt0.y)
-    let res = EcPoint(pt0.x, y)
+# Do the transform: Point(x, y) -> Point(x, -y)
+func ec_neg{range_check_ptr}(pt : EcPoint) -> (res: EcPoint):
+    %{
+        p = ids.P0 + ids.P1 * ids.BASE + ids.P2 * ids.BASE ** 2
+
+        y = pack(ids.pt.y, PRIME)
+
+        new_y = value = -y % p
+    %}
+
+    let (new_y) = nondet_bigint3()
+    assert pt.y.d0 + new_y.d0 = P0
+    assert pt.y.d1 + new_y.d1 = P1
+    assert pt.y.d2 + new_y.d2 = P2
+
+    let res = EcPoint(pt.x, new_y)
     return (res=res)
 end
 
