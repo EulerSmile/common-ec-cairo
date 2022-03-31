@@ -1,5 +1,5 @@
-from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
-from field import verify_urbigInt3_zero, verify_urbigInt5_zero, is_urbigInt3_zero
+from bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul, bigint_div_mod, bigint_sub_mod, verify_urbigint5_zero
+from field import verify_urbigInt3_zero, is_urbigInt3_zero
 from param_def import BASE, P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
 
 # Represents a point on the elliptic curve.
@@ -17,33 +17,21 @@ func compute_doubling_slope{range_check_ptr}(pt : EcPoint) -> (slope : BigInt3):
     # contradicts the fact that the size of the curve is odd.
     
     let P = BigInt3(P0, P1, P2)
-    %{
-        from starkware.cairo.common.cairo_secp.secp_utils import pack
-        from starkware.python.math_utils import div_mod
+    let (x_sqr) = bigint_mul(pt.x, pt.x)
+    let y_2 = UnreducedBigInt3(
+        d0 = pt.y.d0 * 2,
+        d1 = pt.y.d1 * 2,
+        d2 = pt.y.d2 * 2,
+    )
 
-        # Compute the slope.
-        p = ids.P0 + ids.P1 * ids.BASE + ids.P2 * ids.BASE ** 2
-        a = ids.A0 + ids.A1 * ids.BASE + ids.A2 * ids.BASE ** 2
-
-        x = pack(ids.pt.x, PRIME)
-        y = pack(ids.pt.y, PRIME)
-
-        value = slope = div_mod(3 * x ** 2 + a, 2 * y, p)
-        
-    %}
-    let (slope : BigInt3) = nondet_bigint3()
-
-    let (x_sqr : UnreducedBigInt5) = bigint_mul(pt.x, pt.x)
-    let (slope_y : UnreducedBigInt5) = bigint_mul(slope, pt.y)
-
-    verify_urbigInt5_zero(
+    let (slope) = bigint_div_mod(
         UnreducedBigInt5(
-        d0=3 * x_sqr.d0 - 2 * slope_y.d0 + A0,
-        d1=3 * x_sqr.d1 - 2 * slope_y.d1 + A1,
-        d2=3 * x_sqr.d2 - 2 * slope_y.d2 + A2,
-        d3=3 * x_sqr.d3 - 2 * slope_y.d3,
-        d4=3 * x_sqr.d4 - 2 * slope_y.d4), P)
-    
+            d0 = x_sqr.d0 * 3 + A0,
+            d1 = x_sqr.d1 * 3 + A1,
+            d2 = x_sqr.d2 * 3 + A2,
+            d3 = x_sqr.d3 * 3,
+            d4 = x_sqr.d4 * 3
+        ), y_2, P)
     return (slope=slope)
 end
 
@@ -51,35 +39,21 @@ end
 # The slope is used to compute pt0 + pt1.
 # Assumption: pt0.x != pt1.x (mod curve_prime).
 func compute_slope{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (slope : BigInt3):
-    
     let P = BigInt3(P0, P1, P2)
-    %{
-        from starkware.cairo.common.cairo_secp.secp_utils import pack
-        from starkware.python.math_utils import div_mod
-
-        p = ids.P0 + ids.P1 * ids.BASE + ids.P2 * ids.BASE ** 2
-
-        # Compute the slope.
-        x0 = pack(ids.pt0.x, PRIME)
-        y0 = pack(ids.pt0.y, PRIME)
-        x1 = pack(ids.pt1.x, PRIME)
-        y1 = pack(ids.pt1.y, PRIME)
-        value = slope = div_mod(y0 - y1, x0 - x1, p)
-    %}
-    let (slope) = nondet_bigint3()
-
-    let x_diff = BigInt3(d0=pt0.x.d0 - pt1.x.d0, d1=pt0.x.d1 - pt1.x.d1, d2=pt0.x.d2 - pt1.x.d2)
-    let (x_diff_slope : UnreducedBigInt5) = bigint_mul(x_diff, slope)
-
-    verify_urbigInt5_zero(
-        UnreducedBigInt5(
-        d0=x_diff_slope.d0 - pt0.y.d0 + pt1.y.d0,
-        d1=x_diff_slope.d1 - pt0.y.d1 + pt1.y.d1,
-        d2=x_diff_slope.d2 - pt0.y.d2 + pt1.y.d2,
-        d3=x_diff_slope.d3,
-        d4=x_diff_slope.d4,), P)
-
-    return (slope)
+    let x_diff = UnreducedBigInt3(
+        d0 = pt0.x.d0 - pt1.x.d0,
+        d1 = pt0.x.d1 - pt1.x.d1,
+        d2 = pt0.x.d2 - pt1.x.d2
+    )
+    let y_diff = UnreducedBigInt5(
+        d0 = pt0.y.d0 - pt1.y.d0,
+        d1 = pt0.y.d1 - pt1.y.d1,
+        d2 = pt0.y.d2 - pt1.y.d2,
+        d3 = 0,
+        d4 = 0
+    )
+    let (slope) = bigint_div_mod(y_diff, x_diff, P)
+    return (slope=slope)
 end
 
 # Given a point 'pt' on the elliptic curve, computes pt + pt.
@@ -96,42 +70,27 @@ func ec_double{range_check_ptr}(pt : EcPoint) -> (res : EcPoint):
     let P = BigInt3(P0, P1, P2)
     let (slope : BigInt3) = compute_doubling_slope(pt)
     let (slope_sqr : UnreducedBigInt5) = bigint_mul(slope, slope)
-    
-    %{
-        from starkware.cairo.common.cairo_secp.secp_utils import pack
-        
-        p = ids.P0 + ids.P1 * ids.BASE + ids.P2 * ids.BASE ** 2
 
-        slope = pack(ids.slope, PRIME)
-        x = pack(ids.pt.x, PRIME)
-        y = pack(ids.pt.y, PRIME)
-
-        value = new_x = (pow(slope, 2, p) - 2 * x) % p
-        
-    %}
-    let (new_x : BigInt3) = nondet_bigint3()
-
-    %{ value = new_y = (slope * (x - new_x) - y) % p %}
-    let (new_y : BigInt3) = nondet_bigint3()
-
-    verify_urbigInt5_zero(
+    let (new_x) = bigint_div_mod(
         UnreducedBigInt5(
-        d0=slope_sqr.d0 - new_x.d0 - 2 * pt.x.d0,
-        d1=slope_sqr.d1 - new_x.d1 - 2 * pt.x.d1,
-        d2=slope_sqr.d2 - new_x.d2 - 2 * pt.x.d2,
-        d3=slope_sqr.d3,
-        d4=slope_sqr.d4), P)
+            d0 = slope_sqr.d0 - 2 * pt.x.d0,
+            d1 = slope_sqr.d1 - 2 * pt.x.d1,
+            d2 = slope_sqr.d2 - 2 * pt.x.d2,
+            d3 = slope_sqr.d3,
+            d4 = slope_sqr.d4
+        ), UnreducedBigInt3(1, 0, 0), P)
 
     let (x_diff_slope : UnreducedBigInt5) = bigint_mul(
         BigInt3(d0=pt.x.d0 - new_x.d0, d1=pt.x.d1 - new_x.d1, d2=pt.x.d2 - new_x.d2), slope)
 
-    verify_urbigInt5_zero(
+    let (new_y) = bigint_div_mod(
         UnreducedBigInt5(
-        d0=x_diff_slope.d0 - pt.y.d0 - new_y.d0,
-        d1=x_diff_slope.d1 - pt.y.d1 - new_y.d1,
-        d2=x_diff_slope.d2 - pt.y.d2 - new_y.d2,
-        d3=x_diff_slope.d3 ,
-        d4=x_diff_slope.d4 ), P)
+            d0 = x_diff_slope.d0 - pt.y.d0,
+            d1 = x_diff_slope.d1 - pt.y.d1,
+            d2 = x_diff_slope.d2 - pt.y.d2,
+            d3 = x_diff_slope.d3,
+            d4 = x_diff_slope.d4
+        ), UnreducedBigInt3(1, 0, 0), P)
 
     return (EcPoint(new_x, new_y))
 end
@@ -159,42 +118,25 @@ func fast_ec_add{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (res : EcPoin
     let P = BigInt3(P0,P1,P2)
     let (slope : BigInt3) = compute_slope(pt0, pt1)
     let (slope_sqr : UnreducedBigInt5) = bigint_mul(slope, slope)
-    
-    %{
-        from starkware.cairo.common.cairo_secp.secp_utils import  pack
-
-        p = ids.P0 + ids.P1 * ids.BASE + ids.P2 * ids.BASE ** 2
-
-        slope = pack(ids.slope, PRIME)
-        x0 = pack(ids.pt0.x, PRIME)
-        x1 = pack(ids.pt1.x, PRIME)
-        y0 = pack(ids.pt0.y, PRIME)
-
-        value = new_x = (pow(slope, 2, p) - x0 - x1) % p
-    %}
-    let (new_x : BigInt3) = nondet_bigint3()
-
-    %{ value = new_y = (slope * (x0 - new_x) - y0) % p %}
-    let (new_y : BigInt3) = nondet_bigint3()
-
-    verify_urbigInt5_zero(
+    let (new_x : BigInt3) = bigint_div_mod(
         UnreducedBigInt5(
-        d0=slope_sqr.d0 - new_x.d0 - pt0.x.d0 - pt1.x.d0,
-        d1=slope_sqr.d1 - new_x.d1 - pt0.x.d1 - pt1.x.d1,
-        d2=slope_sqr.d2 - new_x.d2 - pt0.x.d2 - pt1.x.d2,
-        d3=slope_sqr.d3,
-        d4=slope_sqr.d4),P)
-
+            d0 = slope_sqr.d0 - pt0.x.d0 - pt1.x.d0,
+            d1 = slope_sqr.d1 - pt0.x.d1 - pt1.x.d1,
+            d2 = slope_sqr.d2 - pt0.x.d2 - pt1.x.d2,
+            d3 = slope_sqr.d3,
+            d4 = slope_sqr.d4
+        ), UnreducedBigInt3(1, 0, 0), P)
+    
     let (x_diff_slope : UnreducedBigInt5) = bigint_mul(
         BigInt3(d0=pt0.x.d0 - new_x.d0, d1=pt0.x.d1 - new_x.d1, d2=pt0.x.d2 - new_x.d2), slope)
-
-    verify_urbigInt5_zero(
+    let (new_y) = bigint_div_mod(
         UnreducedBigInt5(
-        d0=x_diff_slope.d0 - pt0.y.d0 - new_y.d0,
-        d1=x_diff_slope.d1 - pt0.y.d1 - new_y.d1,
-        d2=x_diff_slope.d2 - pt0.y.d2 - new_y.d2,
-        d3=x_diff_slope.d3,
-        d4=x_diff_slope.d4), P)
+            d0 = x_diff_slope.d0 - pt0.y.d0,
+            d1 = x_diff_slope.d1 - pt0.y.d1,
+            d2 = x_diff_slope.d2 - pt0.y.d2,
+            d3 = x_diff_slope.d3,
+            d4 = x_diff_slope.d4
+        ), UnreducedBigInt3(1, 0, 0), P)
 
     return (EcPoint(new_x, new_y))
 end
@@ -227,20 +169,8 @@ end
 
 # Do the transform: Point(x, y) -> Point(x, -y)
 func ec_neg{range_check_ptr}(pt : EcPoint) -> (res: EcPoint):
-    %{
-        p = ids.P0 + ids.P1 * ids.BASE + ids.P2 * ids.BASE ** 2
-
-        y = pack(ids.pt.y, PRIME)
-
-        new_y = value = -y % p
-    %}
-
-    let (new_y) = nondet_bigint3()
-    assert pt.y.d0 + new_y.d0 = P0
-    assert pt.y.d1 + new_y.d1 = P1
-    assert pt.y.d2 + new_y.d2 = P2
-
-    let res = EcPoint(pt.x, new_y)
+    let (neg_y) = bigint_sub_mod(BigInt3(0, 0, 0), pt.y, BigInt3(P0, P1, P2))
+    let res = EcPoint(pt.x, neg_y)
     return (res=res)
 end
 
@@ -292,37 +222,20 @@ end
 # (y_G - y_pt)(y_G + y_pt) = (x_G^2 + x_G*x_pt + x_pt^2 + a)(x_G - x_pt)
 func verify_point{range_check_ptr}(pt: EcPoint):
     let GX = BigInt3(GX0, GX1, GX2)
-    let GY = BigInt3(GY0, GY1, GY2)
     let P = BigInt3(P0, P1, P2)
-    %{
-        from starkware.cairo.common.cairo_secp.secp_utils import pack
 
-        p = ids.P0 + ids.P1 * ids.BASE + ids.P2 * ids.BASE ** 2
-        gx = ids.GX0 + ids.GX1 * ids.BASE + ids.GX2 * ids.BASE ** 2
-        kx = pack(ids.pt.x, PRIME)
-
-        gx2 = (gx * gx) % p
-        gkx_prod = (gx * kx) % p
-        kx2 = (kx * kx) % p
-
-        a = ids.A0 + ids.A1 * ids.BASE + ids.A2 * ids.BASE ** 2
-        value = q = (gx2 + gkx_prod + kx2 + a) % p
-    %}
-
-    let (q) = nondet_bigint3()
-
-    # check correctness of q.
     let (gx2) = bigint_mul(GX, GX)
     let (gkx_prod) = bigint_mul(pt.x, GX)
     let (kx2) = bigint_mul(pt.x, pt.x)
 
-    verify_urbigInt5_zero(UnreducedBigInt5(
-        d0 = gx2.d0 + gkx_prod.d0 + kx2.d0 + A0 - q.d0,
-        d1 = gx2.d1 + gkx_prod.d1 + kx2.d1 + A1 - q.d1,
-        d2 = gx2.d2 + gkx_prod.d2 + kx2.d2 + A2 - q.d2,
-        d3 = gx2.d3 + gkx_prod.d3 + kx2.d3,
-        d4 = gx2.d4 + gkx_prod.d4 + kx2.d4,
-    ), P)
+    let (q) = bigint_div_mod(
+        UnreducedBigInt5(
+            d0 = gx2.d0 + gkx_prod.d0 + kx2.d0 + A0,
+            d1 = gx2.d1 + gkx_prod.d1 + kx2.d1 + A1,
+            d2 = gx2.d2 + gkx_prod.d2 + kx2.d2 + A2,
+            d3 = gx2.d3 + gkx_prod.d3 + kx2.d3,
+            d4 = gx2.d4 + gkx_prod.d4 + kx2.d4
+        ), UnreducedBigInt3(1, 0, 0), P)
 
     # check left == right
     let gky_diff = BigInt3(
@@ -343,7 +256,7 @@ func verify_point{range_check_ptr}(pt: EcPoint):
     let (left_diff) = bigint_mul(gky_diff, gky_sum)
     let (right_diff) = bigint_mul(q, gkx_diff)
 
-    verify_urbigInt5_zero(
+    verify_urbigint5_zero(
         UnreducedBigInt5(
         d0 = left_diff.d0 - right_diff.d0,
         d1 = left_diff.d1 - right_diff.d1,

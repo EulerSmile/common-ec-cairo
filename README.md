@@ -6,7 +6,7 @@ For now, it only support 256-bit curve.
 
 #### Outsourcing computing
 
-We use Python to compute the complex field computing, and verify the correctness in Cairo. 
+We use Python to compute the complex field computing, and verify the correctness in Cairo. Especially, we use [ff-cairo](https://github.com/EulerSmile/ff-cairo) do finite field operations.
 
 #### How to use it?
 
